@@ -9,10 +9,10 @@ export default defineConfig({
   adapter: node({
     mode: 'standalone',
   }),
-  // AGREGAMOS ESTA SECCIÓN PARA RENDER
+  // Esto debería sacarte el subrayado rojo y Render lo va a leer igual
   server: {
-    host: true,
-    port: 10000
+    host: '0.0.0.0',
+    port: 10000,
   },
   integrations: [
     icon(), 
