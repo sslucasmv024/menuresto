@@ -1,11 +1,10 @@
 import puppeteer from 'puppeteer';
 
 export async function actualizarMenuPDF() {
-  console.log('🤖 El robot está arrancando...');
+  console.log('🤖 Iniciando robot...');
 
-  // 1. Configuración para RENDER (Usando el Chrome del sistema)
   const browser = await puppeteer.launch({
-    executablePath: '/usr/bin/google-chrome-stable',
+    // Eliminamos la ruta fija de /usr/bin y dejamos que Puppeteer use su cache
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -17,30 +16,23 @@ export async function actualizarMenuPDF() {
   try {
     const page = await browser.newPage();
     
-    // 2. Usar la URL real de tu web en Render (o 0.0.0.0 que es el estándar de servidores)
-    const url = process.env.RENDER_EXTERNAL_URL || 'http://0.0.0.0:10000';
-    console.log(`🔗 El robot está visitando: ${url}/menu-pdf`);
-
-    await page.goto(`${url}/menu-pdf`, { 
-      waitUntil: 'networkidle0',
-      timeout: 60000 
-    });
+    // IMPORTANTE: En Render, Astro corre internamente en el puerto 10000 o el que asigne PORT
+    const port = process.env.PORT || 4321;
+    const url = `http://localhost:${port}`;
     
-    // 3. GUARDAR EN /tmp (Vital para que 'guardar.js' lo encuentre)
-    const outputPath = '/tmp/menu.pdf';
-
+    console.log(`🔗 Visitando: ${url}/menu-pdf`);
+    await page.goto(`${url}/menu-pdf`, { waitUntil: 'networkidle0', timeout: 60000 });
+    
     await page.pdf({ 
-      path: outputPath, 
+      path: '/tmp/menu.pdf', 
       format: 'A4', 
-      printBackground: true,
-      margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
+      printBackground: true 
     });
 
-    console.log('✅ PDF generado con éxito en /tmp/menu.pdf');
-
+    console.log('✅ PDF guardado en /tmp/menu.pdf');
   } catch (error) {
-    console.error('❌ Error del robot Puppeteer:', error);
-    throw error; // Re-lanzamos el error para que 'guardar.js' sepa que falló
+    console.error('❌ Error:', error);
+    throw error;
   } finally {
     await browser.close();
   }
