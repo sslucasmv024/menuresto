@@ -2,13 +2,18 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import icon from 'astro-icon';
-import node from '@astrojs/node'; // 1. Importamos el adaptador de Node
+import node from '@astrojs/node';
 
 export default defineConfig({
-  output: 'server', // 2. Cambiamos a modo servidor para permitir formularios y escritura
+  output: 'server',
   adapter: node({
-    mode: 'standalone', // 3. Configuramos cómo se ejecutará el servidor
+    mode: 'standalone',
   }),
+  // AGREGAMOS ESTA SECCIÓN PARA RENDER
+  server: {
+    host: true,
+    port: 10000
+  },
   integrations: [
     icon(), 
   ],
