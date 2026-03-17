@@ -7,45 +7,52 @@ export async function POST({ request }) {
   try {
     const data = await request.formData();
     const id = data.get('id');
-    const nuevoPrecio = data.get('precio');
+    const nuevoPrecio = Number(data.get('precio'));
 
-    // 1. Actualizamos el JSON (Tu lógica actual)
+    // 1. Ruta absoluta al JSON
     const jsonPath = path.resolve('./src/data/menu.json');
-    const menu = JSON.parse(await fs.readFile(jsonPath, 'utf-8'));
-    const index = menu.findIndex(item => item.id === id);
     
+    // 2. Leer, modificar y GUARDAR
+    const fileData = await fs.readFile(jsonPath, 'utf-8');
+    let menu = JSON.parse(fileData);
+    
+    const index = menu.findIndex(item => item.id === id);
     if (index !== -1) {
-      menu[index].precio = Number(nuevoPrecio);
-      await fs.writeFile(jsonPath, JSON.stringify(menu, null, 2));
+      menu[index].precio = nuevoPrecio;
+      
+      // Escribimos el archivo y esperamos a que el sistema de archivos confirme (fsync)
+      const jsonString = JSON.stringify(menu, null, 2);
+      await fs.writeFile(jsonPath, jsonString, 'utf-8');
+      
+      console.log(`✅ Precio actualizado en JSON: ${nuevoPrecio}`);
 
-      // 2. LLAMAMOS AL ROBOT: Aquí es donde Puppeteer crea el PDF
-      // IMPORTANTE: Esta función debe estar configurada para guardar en /tmp/menu.pdf
+      // 3. PEQUEÑA PAUSA: Damos 500ms para que el disco procese el cambio
+      // antes de que el robot entre a la web.
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 4. EL ROBOT: Ahora sí saca la foto
       await actualizarMenuPDF();
     }
 
-    // 3. LA DESCARGA: Buscamos el archivo que el robot acaba de crear
+    // 5. RESPUESTA DE DESCARGA
     const pdfPath = '/tmp/menu.pdf';
-
     if (existsSync(pdfPath)) {
       const pdfBuffer = await fs.readFile(pdfPath);
       
-      // Enviamos el PDF directamente al navegador
       return new Response(pdfBuffer, {
         status: 200,
         headers: {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': 'attachment; filename="menu-actualizado.pdf"',
+          'Content-Disposition': `attachment; filename="menu-id-${id}.pdf"`,
+          'Cache-Control': 'no-cache' // Evitamos que el navegador guarde versiones viejas
         }
       });
-    } else {
-      throw new Error("El archivo PDF no se encontró en /tmp/menu.pdf");
     }
 
+    return new Response("Error: PDF no generado", { status: 500 });
+
   } catch (error) {
-    console.error("Error en el servidor:", error);
-    return new Response(JSON.stringify({ error: error.message }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error("❌ Error en Guardar:", error);
+    return new Response(error.message, { status: 500 });
   }
 }
