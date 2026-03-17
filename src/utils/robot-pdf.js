@@ -1,3 +1,4 @@
+// src/utils/robot-pdf.js
 import puppeteer from 'puppeteer';
 
 export async function actualizarMenuPDF() {
@@ -5,7 +6,7 @@ export async function actualizarMenuPDF() {
 
   let browser;
   try {
-    // 1. Lanzamos el navegador usando el caché de Render
+    // 1. Lanzamos el navegador en Render
     browser = await puppeteer.launch({
       args: [
         '--no-sandbox',
@@ -17,31 +18,36 @@ export async function actualizarMenuPDF() {
 
     const page = await browser.newPage();
 
-    // 2. Evitamos el Cache del Navegador
-    // Esto obliga a Puppeteer a pedir una versión fresca de la página
+    // 2. DESACTIVAR CACHÉ DEL NAVEGADOR
     await page.setCacheEnabled(false);
 
-    // 3. Construimos la URL con un "timestamp" para engañar al servidor
-    // Esto asegura que Render no nos devuelva una versión guardada en memoria
+    // 3. Ruta de diseño con TIMESTAMP dinámico para romper caché de Astro
     const port = process.env.PORT || 4321;
     const timestamp = Date.now();
+    // Apuntamos a /menu-pdf (la página de diseño)
     const url = `http://localhost:${port}/menu-pdf?t=${timestamp}`;
     
     console.log(`🔗 El robot está visitando: ${url}`);
 
     // 4. Navegación con espera total
     await page.goto(url, {
-      waitUntil: 'networkidle0', // Espera a que no haya tráfico de red (imágenes cargadas)
-      timeout: 60000 
+      waitUntil: 'networkidle0', // Espera a que cargue todo (imágenes, red, etc.)
+      timeout: 60000 // 1 minuto de timeout
     });
 
-    // 5. Generamos el PDF en la carpeta temporal
+    // --- 🚨 FUERZA BRUTA: ESPERA EXTRA DE 2 SEGUNDOS 🚨 ---
+    // Le damos tiempo al servidor de Render para que termine de leer el JSON nuevo
+    console.log('⏳ Esperando 2 segundos para asegurar datos frescos...');
+    await new Promise(resolve => setTimeout(resolve, 2000)); 
+    // --------------------------------------------------------
+
+    // 5. Generamos el PDF en la carpeta temporal /tmp/
     const outputPath = '/tmp/menu.pdf';
 
     await page.pdf({
       path: outputPath,
       format: 'A4',
-      printBackground: true,
+      printBackground: true, // Captura los fondos de Tailwind
       margin: {
         top: '10px',
         bottom: '10px',
@@ -54,6 +60,7 @@ export async function actualizarMenuPDF() {
 
   } catch (error) {
     console.error('❌ Error crítico del robot:', error.message);
+    throw error; // Re-lanzamos el error para que menu.pdf.js lo capture
   } finally {
     if (browser) {
       await browser.close();
