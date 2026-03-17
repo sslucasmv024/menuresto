@@ -1,33 +1,48 @@
 import puppeteer from 'puppeteer';
+import path from 'path';
+import fs from 'fs';
 
 async function crearPDF() {
-  console.log('🚀 Iniciando el robot de PDF...');
+  console.log('🚀 Iniciando proceso de PDF en el servidor...');
   
-  // 1. El robot abre un navegador invisible
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
-
-  // 2. Entra a tu página de menú (asegúrate que tu server esté corriendo)
-  // Usamos el puerto por defecto de Astro: 4321
-  await page.goto('http://localhost:4321/menu-pdf', {
-    waitUntil: 'networkidle0', // Espera a que no haya más peticiones de red (fotos, etc.)
+  const browser = await puppeteer.launch({
+    // Estos argumentos son OBLIGATORIOS para que Linux no bloquee a Chrome
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--single-process'
+    ]
   });
 
-  // 3. Genera el PDF con configuración de página
-  await page.pdf({
-    path: './public/menu.pdf', // Se guardará en la carpeta public
-    format: 'A4',
-    printBackground: true,     // Para que se vean los colores de fondo de Tailwind
-    margin: {
-      top: '20px',
-      bottom: '20px',
-      left: '20px',
-      right: '20px'
-    }
-  });
+  try {
+    const page = await browser.newPage();
+    
+    // Usamos la URL de Render o 0.0.0.0 si falla
+    const url = process.env.RENDER_EXTERNAL_URL || 'http://0.0.0.0:10000';
+    
+    await page.goto(`${url}/menu-pdf`, {
+      waitUntil: 'networkidle0',
+      timeout: 60000 // Le damos 1 minuto por si el servidor está lento
+    });
 
-  await browser.close();
-  console.log('✅ ¡Menú actualizado con éxito en /public/menu.pdf!');
+    // IMPORTANTE: En Render no podemos escribir en /public/
+    // Usamos la carpeta /tmp/ que es para archivos temporales
+    const outputPath = '/tmp/menu.pdf';
+
+    await page.pdf({
+      path: outputPath,
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
+    });
+
+    console.log(`✅ PDF generado con éxito en: ${outputPath}`);
+  } catch (error) {
+    console.error('❌ Error fatal generando PDF:', error);
+  } finally {
+    await browser.close();
+  }
 }
 
 crearPDF();
