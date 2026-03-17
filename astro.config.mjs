@@ -9,11 +9,15 @@ export default defineConfig({
   adapter: node({
     mode: 'standalone',
   }),
-  // Esto debería sacarte el subrayado rojo y Render lo va a leer igual
+  // --- ESTO ARREGLA EL ERROR DEL FORMULARIO ---
+  security: {
+    checkOrigin: true,
+  },
   server: {
     host: '0.0.0.0',
     port: 10000,
   },
+  // --------------------------------------------
   integrations: [
     icon(), 
   ],
