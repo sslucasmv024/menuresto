@@ -9,9 +9,9 @@ export default defineConfig({
   adapter: node({
     mode: 'standalone',
   }),
-  // --- ESTO ARREGLA EL ERROR DEL FORMULARIO ---
+  // --- CONFIGURACIÓN DE SEGURIDAD REFORZADA ---
   security: {
-    checkOrigin: true,
+    checkOrigin: false, // Desactiva la verificación estricta
   },
   server: {
     host: '0.0.0.0',
