@@ -1,33 +1,24 @@
 ---
+// src/pages/menu-pdf.astro
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
+// 1. IMPORTANTE: Esto evita que Render guarde una versión vieja en cache
 export const prerender = false;
-import menuData from '../data/menu.json'
+
+// 2. Leemos el archivo directamente del disco (No usamos 'import')
+const jsonPath = path.resolve('./src/data/menu.json');
+const fileData = await fs.readFile(jsonPath, 'utf-8');
+const menu = JSON.parse(fileData);
+
+// Opcional: Log para ver en Render qué precio está leyendo el robot
+console.log("🤖 El robot está leyendo el menú con estos datos:", menu[0].precio);
 ---
 
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <title>Menú para Impresión</title>
-</head>
-<body class="bg-white p-10 font-serif text-gray-900">
-  <header class="text-center border-b-2 border-black pb-6 mb-10">
-    <h1 class="text-4xl font-bold uppercase tracking-widest">La Rambla Grill</h1>
-    <p class="italic text-gray-600">Menú del día</p>
-  </header>
-
-  <main class="grid grid-cols-1 gap-8">
-    {menuData.map((item) => (
-      <div class="flex justify-between items-baseline border-b border-dotted border-gray-400 pb-2">
-        <div>
-          <h3 class="text-xl font-bold">{item.nombre}</h3>
-          <p class="text-sm text-gray-500 italic">{item.descripcion}</p>
-        </div>
-        <span class="text-xl font-mono font-bold">${item.precio}</span>
-      </div>
+<html>
+  <body>
+    {menu.map(item => (
+      <div>{item.nombre}: ${item.precio}</div>
     ))}
-  </main>
-
-  <footer class="mt-20 text-center text-xs text-gray-400">
-    <p>Precios sujetos a cambios sin previo aviso.</p>
-  </footer>
-</body>
+  </body>
 </html>
