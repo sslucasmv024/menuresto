@@ -1,0 +1,16 @@
+[
+  {
+    "id": "1",
+    "seccion": "Entradas",
+    "nombre": "Empanada de Carne",
+    "descripcion": "Cortada a cuchillo, receta tradicional.",
+    "precio": 2400
+  },
+  {
+    "id": "2",
+    "seccion": "Platos Principales",
+    "nombre": "Pollo con Papas",
+    "descripcion": "Medio pollo al horno con papas rústicas.",
+    "precio": 15200
+  }
+]

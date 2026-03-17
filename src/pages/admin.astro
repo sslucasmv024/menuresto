@@ -1,0 +1,60 @@
+---
+import menuData from '../data/menu.json';
+---
+
+<body class="bg-gray-100 p-6 font-sans">
+  <div class="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg border border-orange-100">
+    <h1 class="text-2xl font-bold mb-6 text-orange-600">Panel de Control</h1>
+    
+    <form method="POST" action="/api/guardar" class="space-y-6">
+      <div>
+        <label class="block text-sm font-semibold mb-2 text-gray-700">Seleccionar Plato:</label>
+        <select id="selector-plato" name="id" class="w-full p-3 border rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none">
+          <option value="" disabled selected>Elige un plato...</option>
+          {menuData.map(item => (
+            // Guardamos el precio en un atributo "data-precio" para leerlo luego
+            <option value={item.id} data-precio={item.precio}>{item.nombre}</option>
+          ))}
+        </select>
+      </div>
+
+      <div id="cuadro-precio" class="hidden p-4 bg-orange-50 rounded-xl border border-orange-200">
+        <p class="text-sm text-orange-800">Precio actual en el sistema:</p>
+        <span id="precio-visor" class="text-2xl font-bold text-orange-600">$0</span>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold mb-2 text-gray-700">Nuevo Precio ($):</label>
+        <input type="number" name="precio" required class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Ej: 9500" />
+      </div>
+
+      <button type="submit" class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold hover:bg-orange-700 shadow-md transition-all active:scale-95">
+        ACTUALIZAR MENÚ Y PDF
+      </button>
+    </form>
+
+    {Astro.url.searchParams.get('actualizado') && (
+      <div class="mt-6 p-3 bg-green-100 text-green-700 rounded-lg text-center font-medium animate-bounce">
+        ¡Precio y PDF actualizados! ✅
+      </div>
+    )}
+  </div>
+
+  <script is:inline>
+    const selector = document.getElementById('selector-plato');
+    const cuadro = document.getElementById('cuadro-precio');
+    const visor = document.getElementById('precio-visor');
+
+    selector.addEventListener('change', (e) => {
+      // Obtenemos la opción seleccionada
+      const opcion = e.target.options[e.target.selectedIndex];
+      // Leemos el precio que guardamos en el atributo data-precio
+      const precioActual = opcion.getAttribute('data-precio');
+
+      if (precioActual) {
+        visor.innerText = `$${precioActual}`;
+        cuadro.classList.remove('hidden'); // Mostramos el cuadrito
+      }
+    });
+  </script>
+</body>
