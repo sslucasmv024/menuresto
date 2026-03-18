@@ -1,28 +1,35 @@
-// @ts-check
 import { defineConfig } from 'astro/config';
-import tailwindcss from '@tailwindcss/vite';
-import icon from 'astro-icon';
+import tailwind from '@astrojs/tailwind';
 import node from '@astrojs/node';
 
+// https://astro.build/config
 export default defineConfig({
+  // 1. Definimos que el proyecto es una SSR (Server Side Rendering)
   output: 'server',
+  
+  // 2. Usamos el adaptador de Node para Render
   adapter: node({
     mode: 'standalone',
   }),
-  // --- ESTO ARREGLA EL ERROR DE "FORBIDDEN" ---
-  security: {
-    checkOrigin: false, 
-  },
-  // --------------------------------------------
-  server: {
-    host: true, // Importante para que acepte conexiones de Render
-  },
-  integrations: [
-    icon(), 
-  ],
+
+  // 3. Integración de Tailwind
+  integrations: [tailwind()],
+
+  // 4. CONFIGURACIÓN VITE (Crucial para Puppeteer)
   vite: {
-    plugins: [
-      tailwindcss()
-    ]
-  }
+    ssr: {
+      // Le decimos a Rollup que no intente empaquetar Puppeteer
+      external: ['puppeteer'],
+    },
+    optimizeDeps: {
+      // Evitamos que Vite intente pre-optimizar Puppeteer en el cliente
+      exclude: ['puppeteer'],
+    },
+    build: {
+      rollupOptions: {
+        // Doble seguridad para que el build de producción no falle
+        external: ['puppeteer'],
+      },
+    },
+  },
 });
