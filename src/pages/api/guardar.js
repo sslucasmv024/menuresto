@@ -1,4 +1,3 @@
-// src/pages/api/guardar.js
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { actualizarMenuPDF } from '../../utils/robot-pdf';
@@ -9,10 +8,10 @@ export async function POST({ request }) {
     const id = data.get('id');
     const nuevoPrecio = Number(data.get('precio'));
 
-    // 1. Ruta al JSON (Aseguramos que sea absoluta)
+    // 1. Ruta al JSON
     const jsonPath = path.resolve('./src/data/menu.json');
     
-    // 2. LEER Y ESCRIBIR EL JSON
+    // 2. Leer y Modificar
     const fileData = await fs.readFile(jsonPath, 'utf-8');
     let menu = JSON.parse(fileData);
     
@@ -20,39 +19,42 @@ export async function POST({ request }) {
     if (index !== -1) {
       menu[index].precio = nuevoPrecio;
       
-      // Forzamos la escritura inmediata en el disco
+      // Escribir cambios
       await fs.writeFile(jsonPath, JSON.stringify(menu, null, 2), 'utf-8');
-      console.log(`✅ Disco: Precio de ${id} actualizado a ${nuevoPrecio}`);
+      console.log(`✅ JSON actualizado: ${id} -> ${nuevoPrecio}`);
 
-      // 3. ESPERA TÉCNICA (Fundamental en Render)
-      // Esperamos 1.5 segundos para que el sistema de archivos de Render se actualice
-      // y la página /menu-pdf pueda leer el nuevo valor.
+      // 3. PAUSA PARA RENDER (1.5 segundos)
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // 4. EL ROBOT GENERA EL PDF NUEVO
-      await actualizarMenuPDF();
+      // 4. EJECUTAR ROBOT Y ESPERAR QUE TERMINE
+      console.log("🤖 Iniciando Robot...");
+      await actualizarMenuPDF(); 
+      console.log("✅ Robot finalizó la creación del PDF");
     }
 
-    // 5. ENVIAR EL ARCHIVO PARA DESCARGA (Como antes)
     const pdfPath = '/tmp/menu.pdf';
-    
-    // Leemos el archivo que el robot acaba de crear en la carpeta temporal
+
+    // 5. VERIFICACIÓN ANTES DE LEER
+    try {
+      await fs.access(pdfPath); // Esto chequea si el archivo EXISTE
+    } catch (e) {
+      throw new Error("El Robot no generó el archivo /tmp/menu.pdf. Revisa los logs de Puppeteer.");
+    }
+
+    // 6. LEER Y ENVIAR
     const pdfBuffer = await fs.readFile(pdfPath);
     
-    console.log("📤 Enviando PDF actualizado al navegador...");
-
     return new Response(pdfBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        // Esto fuerza la descarga inmediata
-        'Content-Disposition': `attachment; filename="Menu-Actualizado-${id}.pdf"`,
+        'Content-Disposition': `attachment; filename="Menu-Actualizado.pdf"`,
         'Cache-Control': 'no-cache, no-store, must-revalidate'
       }
     });
 
   } catch (error) {
-    console.error("❌ Error Crítico:", error);
-    return new Response("Error: " + error.message, { status: 500 });
+    console.error("❌ ERROR CRÍTICO EN GUARDAR:", error.message);
+    return new Response(`Error: ${error.message}`, { status: 500 });
   }
 }
