@@ -1,60 +1,73 @@
+// src/pages/api/guardar.js
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { actualizarMenuPDF } from '../../utils/robot-pdf';
+import puppeteer from 'puppeteer';
+import { miDisenoHtml } from '../../utils/template-pdf';
 
 export async function POST({ request }) {
   try {
-    const data = await request.formData();
-    const id = data.get('id');
-    const nuevoPrecio = Number(data.get('precio'));
+    const formData = await request.formData();
+    const itemsActualizados = [];
+    
+    // 1. RECOLECTAR DATOS DEL FORMULARIO
+    // Buscamos items[0], items[1]... hasta que no haya más
+    let i = 0;
+    while (formData.has(`items[${i}][nombre]`)) {
+      itemsActualizados.push({
+        nombre: formData.get(`items[${i}][nombre]`),
+        descripcion: formData.get(`items[${i}][descripcion]`),
+        precio: formData.get(`items[${i}][precio]`)
+      });
+      i++;
+    }
 
-    // 1. Ruta al JSON
+    // 2. ACTUALIZAR EL ARCHIVO JSON
     const jsonPath = path.resolve('./src/data/menu.json');
+    await fs.writeFile(jsonPath, JSON.stringify(itemsActualizados, null, 2), 'utf-8');
+
+    // 3. INICIAR EL ROBOT (PUPPETEER)
+    console.log("🤖 Generando PDF...");
+    const browser = await puppeteer.launch({
+      headless: "new",
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox', 
+        '--single-process', 
+        '--no-zygote'
+      ]
+    });
+
+    const page = await browser.newPage();
+
+    // 4. INYECTAR EL HTML (Sin usar URLs externas)
+    // Le pasamos los 'itemsActualizados' directamente a tu plantilla
+    const htmlFinal = miDisenoHtml(itemsActualizados);
     
-    // 2. Leer y Modificar
-    const fileData = await fs.readFile(jsonPath, 'utf-8');
-    let menu = JSON.parse(fileData);
-    
-    const index = menu.findIndex(item => item.id === id);
-    if (index !== -1) {
-      menu[index].precio = nuevoPrecio;
-      
-      // Escribir cambios
-      await fs.writeFile(jsonPath, JSON.stringify(menu, null, 2), 'utf-8');
-      console.log(`✅ JSON actualizado: ${id} -> ${nuevoPrecio}`);
+    await page.setContent(htmlFinal, { 
+      waitUntil: 'networkidle0' // Espera a que cargue Tailwind si lo usas con script
+    });
 
-      // 3. PAUSA PARA RENDER (1.5 segundos)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+    // Generamos el buffer del PDF
+    const pdfBuffer = await page.pdf({ 
+      format: 'A4', 
+      printBackground: true,
+      margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
+    });
 
-      // 4. EJECUTAR ROBOT Y ESPERAR QUE TERMINE
-      console.log("🤖 Iniciando Robot...");
-      await actualizarMenuPDF(); 
-      console.log("✅ Robot finalizó la creación del PDF");
-    }
+    await browser.close();
 
-    const pdfPath = '/tmp/menu.pdf';
-
-    // 5. VERIFICACIÓN ANTES DE LEER
-    try {
-      await fs.access(pdfPath); // Esto chequea si el archivo EXISTE
-    } catch (e) {
-      throw new Error("El Robot no generó el archivo /tmp/menu.pdf. Revisa los logs de Puppeteer.");
-    }
-
-    // 6. LEER Y ENVIAR
-    const pdfBuffer = await fs.readFile(pdfPath);
-    
+    // 5. ENVIAR EL ARCHIVO AL NAVEGADOR
+    // Esto disparará la descarga automática en el admin
     return new Response(pdfBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="Menu-Actualizado.pdf"`,
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
+        'Content-Disposition': 'attachment; filename="menu-actualizado.pdf"',
       }
     });
 
   } catch (error) {
-    console.error("❌ ERROR CRÍTICO EN GUARDAR:", error.message);
-    return new Response(`Error: ${error.message}`, { status: 500 });
+    console.error("❌ Error Crítico:", error);
+    return new Response(`Hubo un error: ${error.message}`, { status: 500 });
   }
 }

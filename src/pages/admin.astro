@@ -2,58 +2,113 @@
 // src/pages/admin.astro
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import Layout from '../layouts/Layout.astro'; // Asegúrate de que la ruta a tu Layout sea correcta
 
-export const prerender = false; // FUNDAMENTAL para que lea el JSON fresco
+export const prerender = false; // OBLIGATORIO para que Astro lea el JSON real en cada carga
 
-// 1. Leemos el JSON actual antes de cargar la página
+// 1. Buscamos la ruta del JSON
 const jsonPath = path.resolve('./src/data/menu.json');
-const fileData = await fs.readFile(jsonPath, 'utf-8');
-const menu = JSON.parse(fileData);
+let menu = [];
 
-// 2. Si viene un mensaje de éxito por URL (opcional)
-const mensaje = Astro.url.searchParams.get('status') === 'success' ? '✅ ¡Precios actualizados!' : '';
+try {
+  // 2. Intentamos leer los datos actuales
+  const fileData = await fs.readFile(jsonPath, 'utf-8');
+  menu = JSON.parse(fileData);
+} catch (error) {
+  console.error("Error al leer el JSON:", error);
+  // Si falla, dejamos el menú vacío para no romper la página
+  menu = [];
+}
+
+// 3. Verificamos si venimos de un guardado exitoso para mostrar un aviso
+const status = Astro.url.searchParams.get('status');
 ---
 
-<layout title="Panel de Control - La Rambla">
-  <main class="p-8 max-w-2xl mx-auto">
-    <h1 class="text-2xl font-bold mb-6">Editar Precios del Menú</h1>
+<Layout title="Panel de Administración - Menú">
+  <main class="max-w-3xl mx-auto p-6 md:p-12">
     
-    {mensaje && <div class="bg-green-100 text-green-800 p-4 rounded mb-4">{mensaje}</div>}
+    <header class="flex justify-between items-center mb-10">
+      <div>
+        <h1 class="text-3xl font-black text-gray-900 uppercase tracking-tighter">Panel de Precios</h1>
+        <p class="text-gray-500 text-sm">Edita los valores y descarga el PDF actualizado al instante.</p>
+      </div>
+      <a href="/" class="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors">
+        ← Ir al Sitio
+      </a>
+    </header>
 
-    <form action="/api/guardar" method="POST" class="space-y-6">
+    {status === 'success' && (
+      <div class="mb-8 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 flex items-center gap-3 animate-bounce">
+        <span class="text-xl">✅</span>
+        <p class="font-medium">¡Precios actualizados y PDF generado con éxito!</p>
+      </div>
+    )}
+
+    <form action="/api/guardar" method="POST" class="space-y-4">
+      
       {menu.map((item, index) => (
-        <div class="border p-4 rounded-lg bg-gray-50 shadow-sm">
-          <p class="font-bold text-gray-700 mb-2">{item.nombre}</p>
-          
-          {/* Mantenemos el nombre oculto para saber qué estamos editando */}
-          <input type="hidden" name={`items[${index}][nombre]`} value={item.nombre} />
-          <input type="hidden" name={`items[${index}][descripcion]`} value={item.descripcion} />
-          
-          <div class="flex items-center gap-2">
-            <label class="text-sm text-gray-500">Precio:</label>
-            <input 
-              type="number" 
-              name={`items[${index}][precio]`} 
-              value={item.precio} 
-              class="border rounded px-3 py-1 w-32 focus:ring-2 focus:ring-blue-500 outline-none"
-              required
-            />
+        <div class="group bg-white border border-gray-200 p-5 rounded-2xl shadow-sm hover:border-black transition-all">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            
+            <div class="flex-1">
+              <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Producto</label>
+              <p class="font-bold text-gray-800 text-lg">{item.nombre}</p>
+              
+              {/* Inputs ocultos para no perder datos en el JSON al guardar */}
+              <input type="hidden" name={`items[${index}][nombre]`} value={item.nombre} />
+              <input type="hidden" name={`items[${index}][descripcion]`} value={item.descripcion || ''} />
+            </div>
+
+            <div class="w-full md:w-40">
+              <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Precio ($)</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
+                <input 
+                  type="number" 
+                  name={`items[${index}][precio]`} 
+                  value={item.precio} 
+                  step="0.01"
+                  required
+                  class="w-full pl-7 pr-4 py-3 bg-gray-50 border-none rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-black outline-none transition-all"
+                />
+              </div>
+            </div>
+
           </div>
         </div>
       ))}
 
-      <button 
-        type="submit" 
-        class="w-full bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition"
-      >
-        Guardar Cambios y Generar PDF
-      </button>
+      <div class="pt-6 sticky bottom-6">
+        <button 
+          type="submit" 
+          class="w-full bg-black text-white py-5 rounded-2xl font-black text-lg uppercase tracking-widest hover:bg-zinc-800 shadow-2xl shadow-black/20 active:scale-[0.98] transition-all flex justify-center items-center gap-3"
+        >
+          <span>Guardar y Descargar PDF</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="Collection 7 16l-4-4m0 0l4-4m-4 4h18" />
+          </svg>
+        </button>
+      </div>
+
     </form>
-    
-    <div class="mt-8 pt-6 border-t text-center">
-      <a href="/menu.pdf" target="_blank" class="text-blue-600 underline">
-        🔗 Ver PDF actual para el QR
-      </a>
-    </div>
+
+    <footer class="mt-16 pt-8 border-t border-gray-100 text-center">
+      <p class="text-xs text-gray-400 font-medium mb-4 uppercase tracking-widest">Atajos Directos</p>
+      <div class="flex justify-center gap-8">
+        <a href="/menu.pdf" target="_blank" class="text-sm font-bold text-zinc-400 hover:text-red-500 transition-colors flex items-center gap-2">
+          <span>📄 Ver PDF del QR</span>
+        </a>
+      </div>
+    </footer>
+
   </main>
-</layout>
+</Layout>
+
+<style>
+  /* Estilo opcional para que el número no tenga flechitas */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+</style>
