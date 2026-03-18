@@ -6,53 +6,53 @@ import { actualizarMenuPDF } from '../../utils/robot-pdf';
 export async function POST({ request }) {
   try {
     const data = await request.formData();
-    
-    // Capturamos el ID y el nuevo precio que vienen del formulario
     const id = data.get('id');
     const nuevoPrecio = Number(data.get('precio'));
 
-    // 1. Ruta absoluta al archivo de datos
+    // 1. Ruta al JSON (Aseguramos que sea absoluta)
     const jsonPath = path.resolve('./src/data/menu.json');
     
-    // 2. Leer, modificar y GUARDAR en el disco
+    // 2. LEER Y ESCRIBIR EL JSON
     const fileData = await fs.readFile(jsonPath, 'utf-8');
     let menu = JSON.parse(fileData);
     
     const index = menu.findIndex(item => item.id === id);
-    
     if (index !== -1) {
       menu[index].precio = nuevoPrecio;
       
-      const jsonString = JSON.stringify(menu, null, 2);
-      // Escribimos el cambio físicamente en el servidor
-      await fs.writeFile(jsonPath, jsonString, 'utf-8');
-      
-      console.log(`✅ Precio actualizado para ${id}: $${nuevoPrecio}`);
+      // Forzamos la escritura inmediata en el disco
+      await fs.writeFile(jsonPath, JSON.stringify(menu, null, 2), 'utf-8');
+      console.log(`✅ Disco: Precio de ${id} actualizado a ${nuevoPrecio}`);
 
-      // 3. PAUSA CRÍTICA: Esperamos a que Render asiente el archivo en el disco
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 3. ESPERA TÉCNICA (Fundamental en Render)
+      // Esperamos 1.5 segundos para que el sistema de archivos de Render se actualice
+      // y la página /menu-pdf pueda leer el nuevo valor.
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // 4. EL ROBOT: Genera el PDF nuevo con el precio actualizado
-      // Nota: Esto guarda el archivo en /tmp/menu.pdf
+      // 4. EL ROBOT GENERA EL PDF NUEVO
       await actualizarMenuPDF();
-      
-      console.log("🚀 Robot terminó de generar el PDF nuevo.");
     }
 
-    // 5. REDIRECCIÓN (El secreto del éxito)
-    // En lugar de devolver el archivo aquí (que es lo que te causaba confusión),
-    // mandamos al usuario de vuelta al panel. 
-    // Al recargarse el /admin, leerá el JSON y mostrará el precio nuevo.
-    return new Response(null, {
-      status: 302,
+    // 5. ENVIAR EL ARCHIVO PARA DESCARGA (Como antes)
+    const pdfPath = '/tmp/menu.pdf';
+    
+    // Leemos el archivo que el robot acaba de crear en la carpeta temporal
+    const pdfBuffer = await fs.readFile(pdfPath);
+    
+    console.log("📤 Enviando PDF actualizado al navegador...");
+
+    return new Response(pdfBuffer, {
+      status: 200,
       headers: {
-        'Location': '/admin?status=success', // Cambia '/admin' por la ruta de tu panel
-        'Cache-Control': 'no-cache'
+        'Content-Type': 'application/pdf',
+        // Esto fuerza la descarga inmediata
+        'Content-Disposition': `attachment; filename="Menu-Actualizado-${id}.pdf"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       }
     });
 
   } catch (error) {
-    console.error("❌ Error en la API Guardar:", error);
-    return new Response("Error al procesar los datos: " + error.message, { status: 500 });
+    console.error("❌ Error Crítico:", error);
+    return new Response("Error: " + error.message, { status: 500 });
   }
 }
