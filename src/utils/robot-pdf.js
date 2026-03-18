@@ -1,59 +1,46 @@
+// src/utils/robot-pdf.js
 import puppeteer from 'puppeteer';
 import fs from 'node:fs';
 
 export async function actualizarMenuPDF() {
-  console.log('🤖 Robot: Iniciando proceso...');
   let browser;
-
   try {
-    // 1. Lanzamos el navegador con los ajustes para Render
     browser = await puppeteer.launch({
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
       headless: "new",
-      args: [
-        '--no-sandbox', 
-        '--disable-setuid-sandbox', 
-        '--disable-dev-shm-usage', 
-        '--single-process'
-      ]
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process']
     });
 
     const page = await browser.newPage();
-    
-    // 2. Definimos el puerto (Render usa PORT, local usa 4321)
     const port = process.env.PORT || 4321;
-    
-    // 3. Usamos 127.0.0.1 para ir directo al grano internamente
     const url = `http://127.0.0.1:${port}/menu-pdf`;
-    
-    console.log(`🔗 Robot intentando conectar a: ${url}`);
 
-    // 4. Vamos a la página y esperamos a que cargue todo (Tailwind incluído)
-    await page.goto(url, { 
-      waitUntil: 'networkidle0', 
-      timeout: 30000 
-    });
+    console.log(`🤖 Robot: Intentando capturar ${url}...`);
 
-    // 5. Generamos el PDF en la carpeta temporal de Render
+    // Reintento: A veces el servidor interno tarda en responder
+    let intentos = 0;
+    while (intentos < 3) {
+      try {
+        await page.goto(url, { waitUntil: 'networkidle0', timeout: 10000 });
+        break; // Si tiene éxito, sale del bucle
+      } catch (e) {
+        intentos++;
+        console.log(`⚠️ Intento ${intentos} fallido, reintentando...`);
+        await new Promise(r => setTimeout(r, 2000)); // Espera 2 segundos
+        if (intentos === 3) throw e;
+      }
+    }
+
     const outputPath = '/tmp/menu.pdf';
-    await page.pdf({ 
-      path: outputPath, 
-      format: 'A4', 
-      printBackground: true 
-    });
+    await page.pdf({ path: outputPath, format: 'A4', printBackground: true });
 
-    // 6. Verificación de seguridad
     if (fs.existsSync(outputPath)) {
-      console.log('✅ Robot: ARCHIVO CREADO EN /tmp/menu.pdf');
-    } else {
-      console.error('❌ Robot: El comando PDF terminó pero el archivo NO ESTÁ.');
+      console.log('✅ Robot: PDF generado con éxito.');
     }
 
   } catch (error) {
-    console.error('❌ Error Interno del Robot:', error.message);
-    throw new Error("Fallo de Puppeteer: " + error.message);
+    console.error('❌ Error del Robot:', error.message);
+    throw error;
   } finally {
-    // 7. Cerramos siempre el navegador para no agotar la RAM de Render
     if (browser) await browser.close();
   }
 }
