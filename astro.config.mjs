@@ -1,33 +1,28 @@
 import { defineConfig } from 'astro/config';
-import tailwind from '@astrojs/tailwind';
 import node from '@astrojs/node';
+import tailwindcss from '@tailwindcss/vite'; // <--- LA NUEVA FORMA EN V4
 
-// https://astro.build/config
 export default defineConfig({
-  // 1. Definimos que el proyecto es una SSR (Server Side Rendering)
+  // 1. Salida de servidor para que funcionen las APIs
   output: 'server',
   
-  // 2. Usamos el adaptador de Node para Render
+  // 2. Adaptador de Node para Render
   adapter: node({
     mode: 'standalone',
   }),
 
-  // 3. Integración de Tailwind
-  integrations: [tailwind()],
-
-  // 4. CONFIGURACIÓN VITE (Crucial para Puppeteer)
+  // 3. En Tailwind 4, se mete dentro de VITE, no en integrations
   vite: {
+    plugins: [tailwindcss()], 
     ssr: {
-      // Le decimos a Rollup que no intente empaquetar Puppeteer
+      // Evitamos que Rollup intente procesar los binarios de Puppeteer
       external: ['puppeteer'],
     },
     optimizeDeps: {
-      // Evitamos que Vite intente pre-optimizar Puppeteer en el cliente
       exclude: ['puppeteer'],
     },
     build: {
       rollupOptions: {
-        // Doble seguridad para que el build de producción no falle
         external: ['puppeteer'],
       },
     },
