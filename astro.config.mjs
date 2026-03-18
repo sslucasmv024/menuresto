@@ -9,15 +9,10 @@ export default defineConfig({
   adapter: node({
     mode: 'standalone',
   }),
-  // --- CONFIGURACIÓN DE SEGURIDAD REFORZADA ---
-  security: {
-    checkOrigin: false, // Desactiva la verificación estricta
-  },
+  // Eliminamos el puerto fijo 10000 para que Render use el suyo
   server: {
-    host: '0.0.0.0',
-    port: 10000,
+    host: true, // Esto permite conexiones internas y externas
   },
-  // --------------------------------------------
   integrations: [
     icon(), 
   ],
