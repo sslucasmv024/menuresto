@@ -2,12 +2,13 @@
 import puppeteer from 'puppeteer';
 
 export async function actualizarMenuPDF() {
-  console.log('🤖 El robot está despertando para capturar los nuevos precios...');
+  console.log('🤖 El robot está iniciando la captura del menú...');
 
   let browser;
   try {
-    // 1. Lanzamos el navegador en Render
+    // 1. Lanzamos el navegador configurado para el entorno de Render
     browser = await puppeteer.launch({
+      headless: "new",
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -18,53 +19,56 @@ export async function actualizarMenuPDF() {
 
     const page = await browser.newPage();
 
-    // 2. DESACTIVAR CACHÉ DEL NAVEGADOR
+    // 2. MATAMOS EL CACHÉ DEL NAVEGADOR INTERNO
+    // Esto obliga al robot a pedir una versión nueva de la página cada vez
     await page.setCacheEnabled(false);
 
-    // 3. Ruta de diseño con TIMESTAMP dinámico para romper caché de Astro
+    // 3. Definimos la URL local de Astro
     const port = process.env.PORT || 4321;
-    const timestamp = Date.now();
-    // Apuntamos a /menu-pdf (la página de diseño)
-    const url = `http://localhost:${port}/menu-pdf?t=${timestamp}`;
     
-    console.log(`🔗 El robot está visitando: ${url}`);
+    // Agregamos un "timestamp" (v=123456) para que Astro no sirva una página vieja
+    const preventCache = Date.now();
+    const url = `http://localhost:${port}/menu-pdf?v=${preventCache}`;
+    
+    console.log(`🔗 Robot visitando la ruta de diseño: ${url}`);
 
-    // 4. Navegación con espera total
+    // 4. Vamos a la página y esperamos a que no haya actividad de red
     await page.goto(url, {
-      waitUntil: 'networkidle0', // Espera a que cargue todo (imágenes, red, etc.)
-      timeout: 60000 // 1 minuto de timeout
+      waitUntil: 'networkidle0',
+      timeout: 60000 
     });
 
-    // --- 🚨 FUERZA BRUTA: ESPERA EXTRA DE 2 SEGUNDOS 🚨 ---
-    // Le damos tiempo al servidor de Render para que termine de leer el JSON nuevo
-    console.log('⏳ Esperando 2 segundos para asegurar datos frescos...');
+    // --- 🚨 PAUSA DE SEGURIDAD 🚨 ---
+    // Esperamos 2 segundos reales para que el sistema de archivos de Render 
+    // termine de procesar el JSON antes de sacar la "foto".
+    console.log('⏳ Pausa de 2 segundos para asegurar datos frescos...');
     await new Promise(resolve => setTimeout(resolve, 2000)); 
-    // --------------------------------------------------------
 
-    // 5. Generamos el PDF en la carpeta temporal /tmp/
+    // 5. Definimos la ruta de salida (Carpeta temporal de Render)
     const outputPath = '/tmp/menu.pdf';
 
+    // 6. Generamos el PDF
     await page.pdf({
       path: outputPath,
       format: 'A4',
-      printBackground: true, // Captura los fondos de Tailwind
+      printBackground: true, // Importante para que salgan los colores de Tailwind
       margin: {
-        top: '10px',
-        bottom: '10px',
-        left: '10px',
-        right: '10px'
+        top: '20px',
+        bottom: '20px',
+        left: '20px',
+        right: '20px'
       }
     });
 
-    console.log('✅ PDF actualizado y guardado en /tmp/menu.pdf');
+    console.log('✅ PDF generado exitosamente en /tmp/menu.pdf');
 
   } catch (error) {
-    console.error('❌ Error crítico del robot:', error.message);
-    throw error; // Re-lanzamos el error para que menu.pdf.js lo capture
+    console.error('❌ Error en el proceso del Robot:', error);
+    throw error;
   } finally {
     if (browser) {
       await browser.close();
-      console.log('🤖 Robot apagado.');
+      console.log('🤖 Robot desconectado.');
     }
   }
 }

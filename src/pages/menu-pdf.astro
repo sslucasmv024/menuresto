@@ -3,70 +3,32 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+// 1. ESTO ES VITAL: Dice a Astro que NO use versiones viejas
 export const prerender = false;
 
+// 2. LEER EL ARCHIVO REAL DEL DISCO
 const jsonPath = path.resolve('./src/data/menu.json');
 const fileData = await fs.readFile(jsonPath, 'utf-8');
 const menu = JSON.parse(fileData);
-
-console.log("🤖 Generando PDF con Tailwind para La Rambla Grill...");
 ---
 
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .print-color-adjust {
-                print-color-adjust: exact;
-                -webkit-print-color-adjust: exact;
-            }
-        }
-        @page {
-            margin: 0;
-        }
-    </style>
 </head>
-<body class="bg-white p-12 text-zinc-900 print-color-adjust">
-    
-    <div class="max-w-3xl mx-auto border-4 border-double border-zinc-800 p-8">
-        
-        <header class="text-center border-b-2 border-zinc-800 pb-6 mb-8">
-            <h1 class="text-5xl font-black uppercase tracking-tighter text-zinc-900">
-                La Rambla Grill
-            </h1>
-            <p class="text-sm font-bold tracking-widest text-zinc-500 mt-2 uppercase">
-                Sabores al Carbón • Mar del Plata
-            </p>
-        </header>
-
-        <main class="space-y-6">
-            {menu.map((item) => (
-                <div class="flex items-baseline gap-2 break-inside-avoid">
-                    <div class="flex-shrink-0">
-                        <h3 class="text-xl font-bold uppercase text-zinc-800">{item.nombre}</h3>
-                        {item.descripcion && (
-                            <p class="text-sm italic text-zinc-500 max-w-md">{item.descripcion}</p>
-                        )}
-                    </div>
-                    
-                    <div class="flex-grow border-b border-dotted border-zinc-400 mb-1"></div>
-                    
-                    <div class="flex-shrink-0 text-xl font-black text-zinc-900">
-                        ${item.precio.toLocaleString('es-AR')}
-                    </div>
+<body class="bg-white p-10">
+    <h1 class="text-3xl font-bold border-b-2 pb-4 mb-6">La Rambla Grill</h1>
+    <div class="space-y-4">
+        {menu.map((item) => (
+            <div class="flex justify-between items-baseline border-b border-dotted border-gray-300">
+                <div>
+                    <span class="text-xl font-bold uppercase">{item.nombre}</span>
+                    <p class="text-sm text-gray-500 italic">{item.descripcion}</p>
                 </div>
-            ))}
-        </main>
-
-        <footer class="mt-12 pt-6 border-t border-zinc-200 text-center text-[10px] text-zinc-400 uppercase tracking-widest">
-            <p>Precios finales en Pesos Argentinos • {new Date().toLocaleDateString('es-AR')}</p>
-            <p class="mt-1 font-bold">Buen Provecho</p>
-        </footer>
+                <span class="text-xl font-black">${item.precio}</span>
+            </div>
+        ))}
     </div>
-
 </body>
 </html>
