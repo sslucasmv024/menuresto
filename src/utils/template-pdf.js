@@ -1,9 +1,12 @@
 // src/utils/template-pdf.js
 export function miDisenoHtml(menu) {
   const itemsHtml = menu.map(item => `
-    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding: 8px 0;">
-      <span>${item.nombre}</span>
-      <span style="font-weight: bold;">$${item.precio}</span>
+    <div class="flex justify-between items-baseline border-b border-gray-100 py-3">
+      <div class="flex-1">
+        <h3 class="font-bold text-gray-900">${item.nombre}</h3>
+        <p class="text-xs text-gray-500 italic">${item.descripcion || ''}</p>
+      </div>
+      <span class="font-black text-xl text-black ml-4">$${item.precio}</span>
     </div>
   `).join('');
 
@@ -13,9 +16,15 @@ export function miDisenoHtml(menu) {
         <meta charset="UTF-8">
         <script src="https://cdn.tailwindcss.com"></script>
       </head>
-      <body style="padding: 40px; font-family: Arial, sans-serif;">
-        <h1 class="text-3xl font-bold mb-4">Cerradura Electrónica</h1>
-        <div class="max-w-xl mx-auto">${itemsHtml}</div>
+      <body class="p-12 bg-white min-h-screen">
+        <div class="max-w-2xl mx-auto border-t-8 border-black pt-6">
+          <h1 class="text-4xl font-black uppercase tracking-tighter mb-2 text-center">Catálogo de Precios</h1>
+          <p class="text-center text-gray-400 text-xs mb-10 uppercase tracking-widest">Cerradura Electrónica</p>
+          
+          <div class="space-y-1">
+            ${itemsHtml}
+          </div>
+        </div>
       </body>
     </html>
   `;
