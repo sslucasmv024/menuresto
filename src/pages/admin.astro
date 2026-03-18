@@ -31,6 +31,13 @@ import menuData from '../data/menu.json';
       <button type="submit" class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold hover:bg-orange-700 shadow-md transition-all active:scale-95">
         ACTUALIZAR MENÚ Y PDF
       </button>
+      <a 
+  href="/menu.pdf" 
+  target="_blank" 
+  class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition"
+>
+  📄 Ver / Descargar PDF para QR
+</a>
     </form>
 
     {Astro.url.searchParams.get('actualizado') && (
