@@ -9,9 +9,13 @@ export default defineConfig({
   adapter: node({
     mode: 'standalone',
   }),
-  // Eliminamos el puerto fijo 10000 para que Render use el suyo
+  // --- ESTO ARREGLA EL ERROR DE "FORBIDDEN" ---
+  security: {
+    checkOrigin: false, 
+  },
+  // --------------------------------------------
   server: {
-    host: true, // Esto permite conexiones internas y externas
+    host: true, // Importante para que acepte conexiones de Render
   },
   integrations: [
     icon(), 
